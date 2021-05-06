@@ -1,0 +1,87 @@
+package gcit.edu.gcit_scan;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.os.Bundle;
+
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.zxing.Result;
+import com.karumi.dexter.Dexter;
+import com.karumi.dexter.PermissionToken;
+import com.karumi.dexter.listener.PermissionDeniedResponse;
+import com.karumi.dexter.listener.PermissionGrantedResponse;
+import com.karumi.dexter.listener.PermissionRequest;
+import com.karumi.dexter.listener.single.PermissionListener;
+
+import java.util.jar.Manifest;
+
+import me.dm7.barcodescanner.zxing.ZXingScannerView;
+
+public class scannerStore extends AppCompatActivity implements ZXingScannerView.ResultHandler {
+    ZXingScannerView scannerView;
+    DatabaseReference db;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        scannerView=new ZXingScannerView(this);
+        setContentView(scannerView);
+
+        db= FirebaseDatabase.getInstance().getReference("GateStore");
+        Dexter.withContext(getApplicationContext())
+                .withPermission(android.Manifest.permission.CAMERA)
+                .withListener(new PermissionListener() {
+                    @Override
+                    public void onPermissionGranted(PermissionGrantedResponse permissionGrantedResponse) {
+                        scannerView.startCamera();
+
+                    }
+
+                    @Override
+                    public void onPermissionDenied(PermissionDeniedResponse permissionDeniedResponse) {
+
+                    }
+
+                    @Override
+                    public void onPermissionRationaleShouldBeShown(PermissionRequest permissionRequest, PermissionToken permissionToken) {
+                        permissionToken.continuePermissionRequest();
+                    }
+                }).check();
+    }
+
+    @Override
+    public void handleResult(Result result) {
+        String info=result.getText().toString();
+        db.push().setValue(info)
+                .addOnCompleteListener(new OnCompleteListener<Void>(){
+
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        MainActivity.showmsg.setText("Data inserted successfully");
+                        onBackPressed();
+
+                    }
+                });
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        scannerView.stopCamera();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        scannerView.setResultHandler(this);
+        scannerView.startCamera();
+    }
+    
+
+
+
+}
